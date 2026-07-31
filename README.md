@@ -26,6 +26,15 @@ Dynamic nginx module `ngx_http_auth_hmac_module.so` module
 
     ./configure --with-compat --add-dynamic-module=/absolute/path/to/ngx_http_auth_hmac_module
 
+To enable `condition` and `when`, build `ngx_condition_module` statically in
+the same Nginx configuration:
+
+```bash
+./configure \
+    --add-module=/path/to/ngx_condition_module \
+    --add-module=/path/to/ngx_http_auth_hmac_module
+```
+
 Build Nginx
 
     make
@@ -52,8 +61,8 @@ location ^~ /files/ {
     auth_hmac_check_time $arg_ts range_end=$arg_e format=%s;
 
     # Set the token value used for checking
-    # Available formats are hex (default), base64, base64url and bin
-    auth_hmac_check_token $arg_st format=hex;
+    # Available digests are hex (default), base64, base64url and bin
+    auth_hmac_check_token $arg_st digest=hex;
 
     # Secret key
     auth_hmac_secret "my_secret_key";
@@ -75,6 +84,104 @@ location ^~ /files/ {
     rewrite ^/files/(.*)$ /files/$1 break;
 }
 ```
+
+Conditional configuration
+=========================
+
+All module directives support `http`, `server` and `location`. When
+[`ngx_condition_module`](https://git.hanada.info/hanada/ngx_condition_module)
+is built into Nginx, they also support `when` in each of those contexts.
+Every directive selects its value independently:
+
+```nginx
+condition use_sha512 str_eq $host secure.example.com;
+
+when use_sha512 {
+    auth_hmac_algorithm sha512;
+    auth_hmac_secret secure_key;
+}
+
+auth_hmac_algorithm sha256;
+auth_hmac_secret default_key;
+```
+
+The first matching value is used. An unconditional value participates in the
+same ordering, so put it after conditional values when it is intended as a
+fallback. The parameters of one `auth_hmac_check_time` or
+`auth_hmac_check_token` directive are selected as one configuration value.
+
+Directives
+==========
+
+auth_hmac
+---------
+
+**syntax:** `auth_hmac on | off`
+
+**default:** `auth_hmac off`
+
+**context:** `http`, `server`, `location`, `when`
+
+Enables or disables HMAC verification. When disabled, `$auth_hmac` is empty.
+
+auth_hmac_check_time
+--------------------
+
+**syntax:** `auth_hmac_check_time complex_value [range_start=complex_value] [range_end=complex_value] [format=format] [timezone=gmt|gmt+HHMM|gmt-HHMM]`
+
+**default:** none
+
+**context:** `http`, `server`, `location`, `when`
+
+Specifies the request time and its valid range. `format=%s` selects a Unix
+timestamp, `format=%ms` a millisecond timestamp, and `format=%x` a hexadecimal
+timestamp. Other format strings are parsed as dates. `range_start` and
+`range_end` may contain variables.
+
+auth_hmac_check_token
+---------------------
+
+**syntax:** `auth_hmac_check_token complex_value [digest=hex|base64|base64url|bin]`
+
+**default:** none
+
+**context:** `http`, `server`, `location`, `when`
+
+Specifies the supplied HMAC and its encoding. The default digest encoding is
+`hex`.
+
+auth_hmac_message
+-----------------
+
+**syntax:** `auth_hmac_message complex_value`
+
+**default:** none
+
+**context:** `http`, `server`, `location`, `when`
+
+Specifies the message whose HMAC is verified. The value may contain variables.
+
+auth_hmac_secret
+----------------
+
+**syntax:** `auth_hmac_secret complex_value`
+
+**default:** none
+
+**context:** `http`, `server`, `location`, `when`
+
+Specifies the HMAC key. The value may contain variables.
+
+auth_hmac_algorithm
+-------------------
+
+**syntax:** `auth_hmac_algorithm name`
+
+**default:** `auth_hmac_algorithm sha256`
+
+**context:** `http`, `server`, `location`, `when`
+
+Specifies an OpenSSL digest algorithm name.
 
 Application side should use a standard hash_hmac function to generate hash, which then needs to be hex or base64url encoded. Example in Perl below.
 
