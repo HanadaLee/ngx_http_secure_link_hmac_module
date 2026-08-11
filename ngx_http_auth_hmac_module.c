@@ -174,11 +174,11 @@ static ngx_http_module_t  ngx_http_auth_hmac_module_ctx = {
     NULL,                                       /* create main configuration */
     NULL,                                       /* init main configuration */
 
-    NULL,                                       /* create server configuration */
+    NULL,                                       /* create server conf */
     NULL,                                       /* merge server configuration */
 
-    ngx_http_auth_hmac_create_conf,             /* create location configuration */
-    ngx_http_auth_hmac_merge_conf               /* merge location configuration */
+    ngx_http_auth_hmac_create_conf,             /* create location conf */
+    ngx_http_auth_hmac_merge_conf               /* merge location conf */
 };
 
 
@@ -252,7 +252,7 @@ ngx_http_auth_hmac_variable(ngx_http_request_t *r,
         || secret == NULL)
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                    "auth hmac: disabled");
+                      "auth hmac: disabled");
         goto not_found;
     }
 
@@ -299,6 +299,7 @@ ngx_http_auth_hmac_variable(ngx_http_request_t *r,
             }
 
             start_is_valid = 1;
+
         } else {
             start_is_valid = 0;
         }
@@ -340,6 +341,7 @@ ngx_http_auth_hmac_variable(ngx_http_request_t *r,
             }
 
             end_is_valid = 1;
+
         } else {
             end_is_valid = 0;
         }
@@ -350,7 +352,7 @@ ngx_http_auth_hmac_variable(ngx_http_request_t *r,
         || (start_is_valid == 1 && end_is_valid == 1 && start > end))
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                    "auth hmac: invalid time range");
+                      "auth hmac: invalid time range");
         goto not_found;
     }
 
@@ -360,7 +362,7 @@ ngx_http_auth_hmac_variable(ngx_http_request_t *r,
 
     if (value.len == 0) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                    "auth hmac: time is empty");
+                      "auth hmac: time is empty");
         goto not_found;
     }
 
@@ -371,12 +373,12 @@ ngx_http_auth_hmac_variable(ngx_http_request_t *r,
 
         if (value.len < 4) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                        "auth hmac: time len too short");
+                          "auth hmac: time len too short");
             goto not_found;
         }
 
         /* cut off the milliseconds part */
-        timestamp = (time_t) ngx_atoi(value.data , value.len - 3);
+        timestamp = (time_t) ngx_atoi(value.data, value.len - 3);
 
     } else if (time_conf->time_mode == NGX_HTTP_AUTH_HMAC_HEXTIMESTAMP) {
         timestamp = (time_t) ngx_hextoi(value.data, value.len);
@@ -385,18 +387,19 @@ ngx_http_auth_hmac_variable(ngx_http_request_t *r,
         ngx_memzero(&tm, sizeof(ngx_tm_t));
 
         if (strptime((char *) value.data,
-            (char *) time_conf->time_format.data, &tm) == NULL) {
+                     (char *) time_conf->time_format.data, &tm) == NULL)
+        {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                            "failed to parse date string");
+                          "failed to parse date string");
             return NGX_ERROR;
         }
 
         /* Convert to unix_time */
         timestamp = timegm(&tm);
-        
+
         if (timestamp == (time_t) NGX_ERROR) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                        "auth hmac: date conversion failed");
+                          "auth hmac: date conversion failed");
             goto not_found;
         }
 
@@ -445,7 +448,7 @@ token:
     if (token_conf->token_digest == NGX_HTTP_AUTH_HMAC_HEX) {
         if (ngx_http_auth_hmac_hex_decode(&hash, &value) != NGX_OK) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                        "auth hmac: token hex decode fail");
+                          "auth hmac: token hex decode fail");
             goto not_found;
         }
 
@@ -453,7 +456,7 @@ token:
 
         if (ngx_decode_base64(&hash, &value) != NGX_OK) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                        "auth hmac: token base64 decode fail");
+                          "auth hmac: token base64 decode fail");
             goto not_found;
         }
 
@@ -461,7 +464,7 @@ token:
 
         if (ngx_decode_base64url(&hash, &value) != NGX_OK) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                        "auth hmac: token base64url decode fail");
+                          "auth hmac: token base64url decode fail");
             goto not_found;
         }
 
@@ -471,7 +474,7 @@ token:
 
     if (hash.len != (u_int) EVP_MD_size(evp_md)) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                    "auth hmac: token len mismatch");
+                      "auth hmac: token len mismatch");
         goto not_found;
     }
 
@@ -615,6 +618,7 @@ ngx_http_auth_hmac_is_valid_num(ngx_str_t *s)
             {
                 return 0;
             }
+
             p++;
         }
 
@@ -625,6 +629,7 @@ ngx_http_auth_hmac_is_valid_num(ngx_str_t *s)
         if (!(*p >= '0' && *p <= '9')) {
             return 0;
         }
+
         p++;
     }
 
@@ -654,9 +659,9 @@ ngx_http_auth_hmac_check_time(ngx_conf_t *cf,
 
     if (slcf->time != NULL && slcf->time != NGX_CONF_UNSET_PTR
         && ngx_condition_find_expr_ctx(slcf->time, expr_id,
-               sizeof(ngx_conf_condition_ptr_ctx_t),
-               offsetof(ngx_conf_condition_ptr_ctx_t, expr_id))
-           != NULL)
+                                       sizeof(ngx_conf_condition_ptr_ctx_t),
+                                       offsetof(ngx_conf_condition_ptr_ctx_t,
+                                                expr_id)) != NULL)
     {
         return "is duplicate";
     }
@@ -682,7 +687,7 @@ ngx_http_auth_hmac_check_time(ngx_conf_t *cf,
     ccv.cf = cf;
     ccv.value = &value[1];
     ccv.complex_value = ngx_palloc(cf->pool,
-                                sizeof(ngx_http_complex_value_t));
+                                   sizeof(ngx_http_complex_value_t));
     if (ccv.complex_value == NULL) {
         return NGX_CONF_ERROR;
     }
@@ -707,7 +712,8 @@ ngx_http_auth_hmac_check_time(ngx_conf_t *cf,
             }
 
             if (s.len == 3 && s.data[0] == '%'
-                && s.data[1] == 'm' && s.data[2] == 's') {
+                && s.data[1] == 'm' && s.data[2] == 's')
+            {
                 time_conf->time_mode = NGX_HTTP_AUTH_HMAC_MSTIMESTAMP;
                 continue;
             }
@@ -731,7 +737,7 @@ ngx_http_auth_hmac_check_time(ngx_conf_t *cf,
 
             if (ngx_strncmp(s.data, "gmt", 3) != 0) {
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                                "invalid timezone format");
+                                   "invalid timezone format");
                 return NGX_CONF_ERROR;
             }
 
@@ -744,21 +750,21 @@ ngx_http_auth_hmac_check_time(ngx_conf_t *cf,
                 || (s.data[3] != '+' && s.data[3] != '-'))
             {
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                                "invalid timezone format");
+                                   "invalid timezone format");
                 return NGX_CONF_ERROR;
             }
 
             for (j = 4; j < 8; j++) {
                 if (s.data[j] < '0' || s.data[j] > '9') {
                     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                        "invalid timezone value");
+                                       "invalid timezone value");
                     return NGX_CONF_ERROR;
                 }
             }
 
             /* Parse timezone offset, e.g., +0800 or -0200 */
             time_offset = ((s.data[4] - '0') * 10
-                            + (s.data[5] - '0')) * 3600;
+                           + (s.data[5] - '0')) * 3600;
             time_offset += ((s.data[6] - '0') * 10
                             + (s.data[7] - '0')) * 60;
 
@@ -788,7 +794,7 @@ ngx_http_auth_hmac_check_time(ngx_conf_t *cf,
             ccv.cf = cf;
             ccv.value = &s;
             ccv.complex_value = ngx_palloc(cf->pool,
-                                        sizeof(ngx_http_complex_value_t));
+                                           sizeof(ngx_http_complex_value_t));
             if (ccv.complex_value == NULL) {
                 return NGX_CONF_ERROR;
             }
@@ -819,7 +825,7 @@ ngx_http_auth_hmac_check_time(ngx_conf_t *cf,
             ccv.cf = cf;
             ccv.value = &s;
             ccv.complex_value = ngx_palloc(cf->pool,
-                                        sizeof(ngx_http_complex_value_t));
+                                           sizeof(ngx_http_complex_value_t));
             if (ccv.complex_value == NULL) {
                 return NGX_CONF_ERROR;
             }
@@ -875,9 +881,9 @@ ngx_http_auth_hmac_check_token(ngx_conf_t *cf,
 
     if (slcf->token != NULL && slcf->token != NGX_CONF_UNSET_PTR
         && ngx_condition_find_expr_ctx(slcf->token, expr_id,
-               sizeof(ngx_conf_condition_ptr_ctx_t),
-               offsetof(ngx_conf_condition_ptr_ctx_t, expr_id))
-           != NULL)
+                                       sizeof(ngx_conf_condition_ptr_ctx_t),
+                                       offsetof(ngx_conf_condition_ptr_ctx_t,
+                                                expr_id)) != NULL)
     {
         return "is duplicate";
     }
@@ -902,7 +908,7 @@ ngx_http_auth_hmac_check_token(ngx_conf_t *cf,
     ccv.cf = cf;
     ccv.value = &value[1];
     ccv.complex_value = ngx_palloc(cf->pool,
-                                sizeof(ngx_http_complex_value_t));
+                                   sizeof(ngx_http_complex_value_t));
     if (ccv.complex_value == NULL) {
         return NGX_CONF_ERROR;
     }
