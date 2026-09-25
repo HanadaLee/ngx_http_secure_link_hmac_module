@@ -3,8 +3,8 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#if (NGX_CONDITION)
-#include <ngx_http_condition_module.h>
+#if (NGX_EXPR)
+#include <ngx_http_expr_module.h>
 #endif
 
 #include <openssl/evp.h>
@@ -39,7 +39,7 @@ typedef struct {
 
 
 typedef struct {
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
     ngx_array_t               *enable;
     ngx_array_t               *time;
     ngx_array_t               *token;
@@ -77,12 +77,12 @@ static ngx_command_t  ngx_http_auth_hmac_commands[] = {
 
     { ngx_string("auth_hmac"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
 #endif
                         |NGX_CONF_TAKE1,
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
       ngx_conf_set_conditional_flag_slot,
 #else
       ngx_conf_set_flag_slot,
@@ -93,7 +93,7 @@ static ngx_command_t  ngx_http_auth_hmac_commands[] = {
 
     { ngx_string("auth_hmac_check_time"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
 #endif
@@ -105,7 +105,7 @@ static ngx_command_t  ngx_http_auth_hmac_commands[] = {
 
     { ngx_string("auth_hmac_check_token"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
 #endif
@@ -117,13 +117,13 @@ static ngx_command_t  ngx_http_auth_hmac_commands[] = {
 
     { ngx_string("auth_hmac_message"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
 #endif
                         |NGX_CONF_TAKE1,
-#if (NGX_CONDITION)
-      ngx_http_set_conditional_complex_value_slot,
+#if (NGX_EXPR)
+      ngx_http_set_expr_complex_value_slot,
 #else
       ngx_http_set_complex_value_slot,
 #endif
@@ -133,13 +133,13 @@ static ngx_command_t  ngx_http_auth_hmac_commands[] = {
 
     { ngx_string("auth_hmac_secret"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
 #endif
                         |NGX_CONF_TAKE1,
-#if (NGX_CONDITION)
-      ngx_http_set_conditional_complex_value_slot,
+#if (NGX_EXPR)
+      ngx_http_set_expr_complex_value_slot,
 #else
       ngx_http_set_complex_value_slot,
 #endif
@@ -149,12 +149,12 @@ static ngx_command_t  ngx_http_auth_hmac_commands[] = {
 
     { ngx_string("auth_hmac_algorithm"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
 #endif
                         |NGX_CONF_TAKE1,
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
       ngx_conf_set_conditional_str_slot,
 #else
       ngx_conf_set_str_slot,
@@ -230,13 +230,13 @@ ngx_http_auth_hmac_variable(ngx_http_request_t *r,
 
     conf = ngx_http_get_module_loc_conf(r, ngx_http_auth_hmac_module);
 
-#if (NGX_CONDITION)
-    enable = ngx_http_get_conditional_flag_value(r, conf->enable);
-    time_conf = ngx_http_get_conditional_ptr_value(r, conf->time);
-    token_conf = ngx_http_get_conditional_ptr_value(r, conf->token);
-    message = ngx_http_get_conditional_ptr_value(r, conf->message);
-    secret = ngx_http_get_conditional_ptr_value(r, conf->secret);
-    algorithm = ngx_http_get_conditional_str_value(r, conf->algorithm);
+#if (NGX_EXPR)
+    enable = ngx_http_get_expr_flag_value(r, conf->enable);
+    time_conf = ngx_http_get_expr_ptr_value(r, conf->time);
+    token_conf = ngx_http_get_expr_ptr_value(r, conf->token);
+    message = ngx_http_get_expr_ptr_value(r, conf->message);
+    secret = ngx_http_get_expr_ptr_value(r, conf->secret);
+    algorithm = ngx_http_get_expr_str_value(r, conf->algorithm);
 #else
     enable = conf->enable;
     time_conf = conf->time;
@@ -523,7 +523,7 @@ ngx_http_auth_hmac_create_conf(ngx_conf_t *cf)
         return NULL;
     }
 
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
     conf->enable = NGX_CONF_UNSET_PTR;
     conf->time = NGX_CONF_UNSET_PTR;
     conf->token = NGX_CONF_UNSET_PTR;
@@ -544,26 +544,22 @@ ngx_http_auth_hmac_merge_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_auth_hmac_conf_t  *prev = parent;
     ngx_http_auth_hmac_conf_t  *conf = child;
 
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
     ngx_str_t  algorithm = ngx_string("sha256");
 
-    if (ngx_conf_merge_conditional_flag_value(cf, &conf->enable, prev->enable,
-                                              0)
+    if (ngx_conf_merge_expr_flag_value(cf, &conf->enable, prev->enable, 0)
         != NGX_OK
-        || ngx_conf_merge_conditional_ptr_value(cf, &conf->time, prev->time,
-                                                NULL)
+        || ngx_conf_merge_expr_ptr_value(cf, &conf->time, prev->time, NULL)
            != NGX_OK
-        || ngx_conf_merge_conditional_ptr_value(cf, &conf->token, prev->token,
-                                                NULL)
+        || ngx_conf_merge_expr_ptr_value(cf, &conf->token, prev->token, NULL)
            != NGX_OK
-        || ngx_conf_merge_conditional_ptr_value(cf, &conf->message,
-                                                prev->message, NULL)
+        || ngx_conf_merge_expr_ptr_value(cf, &conf->message,
+                                         prev->message, NULL)
            != NGX_OK
-        || ngx_conf_merge_conditional_ptr_value(cf, &conf->secret,
-                                                prev->secret, NULL)
+        || ngx_conf_merge_expr_ptr_value(cf, &conf->secret, prev->secret, NULL)
            != NGX_OK
-        || ngx_conf_merge_conditional_str_value(cf, &conf->algorithm,
-                                                prev->algorithm, algorithm)
+        || ngx_conf_merge_expr_str_value(cf, &conf->algorithm,
+                                         prev->algorithm, algorithm)
            != NGX_OK)
     {
         return NGX_CONF_ERROR;
@@ -649,19 +645,19 @@ ngx_http_auth_hmac_check_time(ngx_conf_t *cf,
     ngx_str_t                        *value;
     ngx_uint_t                        i, j;
     ngx_http_compile_complex_value_t  ccv;
-#if (NGX_CONDITION)
-    ngx_condition_expr_id_t           expr_id;
-    ngx_conf_condition_ptr_ctx_t     *ctx;
+#if (NGX_EXPR)
+    ngx_expr_when_id_t                expr_id;
+    ngx_conf_expr_ptr_ctx_t          *ctx;
 #endif
 
-#if (NGX_CONDITION)
-    expr_id = ngx_condition_get_associated_expr_id(cf);
+#if (NGX_EXPR)
+    expr_id = ngx_expr_get_associated_when_id(cf);
 
     if (slcf->time != NULL && slcf->time != NGX_CONF_UNSET_PTR
-        && ngx_condition_find_expr_ctx(slcf->time, expr_id,
-                                       sizeof(ngx_conf_condition_ptr_ctx_t),
-                                       offsetof(ngx_conf_condition_ptr_ctx_t,
-                                                expr_id)) != NULL)
+        && ngx_expr_find_ctx(slcf->time, expr_id,
+                             sizeof(ngx_conf_expr_ptr_ctx_t),
+                             offsetof(ngx_conf_expr_ptr_ctx_t,
+                             expr_id)) != NULL)
     {
         return "is duplicate";
     }
@@ -838,10 +834,10 @@ ngx_http_auth_hmac_check_time(ngx_conf_t *cf,
         }
     }
 
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
     if (slcf->time == NULL || slcf->time == NGX_CONF_UNSET_PTR) {
         slcf->time = ngx_array_create(cf->pool, 2,
-                                      sizeof(ngx_conf_condition_ptr_ctx_t));
+                                      sizeof(ngx_conf_expr_ptr_ctx_t));
         if (slcf->time == NULL) {
             return NGX_CONF_ERROR;
         }
@@ -871,19 +867,19 @@ ngx_http_auth_hmac_check_token(ngx_conf_t *cf,
 
     ngx_str_t                        *value;
     ngx_http_compile_complex_value_t  ccv;
-#if (NGX_CONDITION)
-    ngx_condition_expr_id_t           expr_id;
-    ngx_conf_condition_ptr_ctx_t     *ctx;
+#if (NGX_EXPR)
+    ngx_expr_when_id_t                expr_id;
+    ngx_conf_expr_ptr_ctx_t          *ctx;
 #endif
 
-#if (NGX_CONDITION)
-    expr_id = ngx_condition_get_associated_expr_id(cf);
+#if (NGX_EXPR)
+    expr_id = ngx_expr_get_associated_when_id(cf);
 
     if (slcf->token != NULL && slcf->token != NGX_CONF_UNSET_PTR
-        && ngx_condition_find_expr_ctx(slcf->token, expr_id,
-                                       sizeof(ngx_conf_condition_ptr_ctx_t),
-                                       offsetof(ngx_conf_condition_ptr_ctx_t,
-                                                expr_id)) != NULL)
+        && ngx_expr_find_ctx(slcf->token, expr_id,
+                             sizeof(ngx_conf_expr_ptr_ctx_t),
+                             offsetof(ngx_conf_expr_ptr_ctx_t,
+                             expr_id)) != NULL)
     {
         return "is duplicate";
     }
@@ -941,10 +937,10 @@ ngx_http_auth_hmac_check_token(ngx_conf_t *cf,
 
     }
 
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
     if (slcf->token == NULL || slcf->token == NGX_CONF_UNSET_PTR) {
         slcf->token = ngx_array_create(cf->pool, 2,
-                                       sizeof(ngx_conf_condition_ptr_ctx_t));
+                                       sizeof(ngx_conf_expr_ptr_ctx_t));
         if (slcf->token == NULL) {
             return NGX_CONF_ERROR;
         }

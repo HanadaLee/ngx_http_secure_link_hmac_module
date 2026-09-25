@@ -26,12 +26,12 @@ Dynamic nginx module `ngx_http_auth_hmac_module.so` module
 
     ./configure --with-compat --add-dynamic-module=/absolute/path/to/ngx_http_auth_hmac_module
 
-To enable `condition` and `when`, build `ngx_condition_module` statically in
+To enable `expr` and `when`, build `ngx_expr_module` statically in
 the same Nginx configuration:
 
 ```bash
 ./configure \
-    --add-module=/path/to/ngx_condition_module \
+    --add-module=/path/to/ngx_expr_module \
     --add-module=/path/to/ngx_http_auth_hmac_module
 ```
 
@@ -89,12 +89,12 @@ Conditional configuration
 =========================
 
 All module directives support `http`, `server` and `location`. When
-[`ngx_condition_module`](https://git.hanada.info/hanada/ngx_condition_module)
+[`ngx_expr_module`](https://git.hanada.info/hanada/ngx_condition_module)
 is built into Nginx, they also support `when` in each of those contexts.
 Every directive selects its value independently:
 
 ```nginx
-condition use_sha512 str_eq $host secure.example.com;
+expr use_sha512 str_eq $host secure.example.com;
 
 when use_sha512 {
     auth_hmac_algorithm sha512;

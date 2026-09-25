@@ -20,7 +20,7 @@ use Test::Nginx;
 select STDERR; $| = 1;
 select STDOUT; $| = 1;
 
-my $t = Test::Nginx->new()->has(qw/http rewrite ngx_condition_module
+my $t = Test::Nginx->new()->has(qw/http rewrite ngx_expr_module
 	ngx_http_auth_hmac_module/)->plan(12);
 
 $t->write_file_expand('nginx.conf', <<'EOF');
@@ -45,7 +45,7 @@ http {
         listen       127.0.0.1:8080;
         server_name  localhost;
 
-        condition alternate str_eq $arg_mode alternate;
+        expr alternate str_eq $arg_mode alternate;
 
         location = /verify {
             when alternate {
