@@ -27,7 +27,20 @@ if [[ "${TEST_EXPR:-enabled}" == enabled ]]; then
     export TEST_NGINX_EXPR=1
 fi
 
-configure_args+=(--add-module="$module_root")
+if [[ "${TEST_MODULE_LINK:-static}" == dynamic ]]; then
+    configure_args+=(--with-compat --add-dynamic-module="$module_root")
+else
+    configure_args+=(--add-module="$module_root")
+fi
+
+if [[ "${TEST_SANITIZE:-disabled}" == enabled ]]; then
+    configure_args+=(
+        --with-cc-opt="-O1 -fsanitize=address,undefined -fno-omit-frame-pointer"
+        --with-ld-opt="-fsanitize=address,undefined"
+    )
+    export ASAN_OPTIONS=detect_leaks=0:detect_stack_use_after_return=1:abort_on_error=1
+    export UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
+fi
 
 cd "$nginx_source"
 sh ./configure "${configure_args[@]}"
@@ -44,6 +57,9 @@ collect_logs() {
 trap collect_logs EXIT
 if [[ "$(id -u)" == 0 ]]; then
     export TEST_NGINX_GLOBALS="${TEST_NGINX_GLOBALS:-user root;}"
+fi
+if [[ "${TEST_MODULE_LINK:-static}" == dynamic ]]; then
+    export TEST_NGINX_GLOBALS="${TEST_NGINX_GLOBALS:-} load_module $nginx_source/objs/ngx_http_secure_link_hmac_module.so;"
 fi
 "$TEST_NGINX_BINARY" -V
 

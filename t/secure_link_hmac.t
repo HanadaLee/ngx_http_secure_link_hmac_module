@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Tests for ngx_http_auth_hmac_module.
+# Tests for ngx_http_secure_link_hmac_module.
 
 ###############################################################################
 
@@ -21,7 +21,7 @@ select STDERR; $| = 1;
 select STDOUT; $| = 1;
 
 my $t = Test::Nginx->new()->has(qw/http rewrite ngx_expr_module
-	ngx_http_auth_hmac_module/)->plan(12);
+	ngx_http_secure_link_hmac_module/)->plan(12);
 
 $t->write_file_expand('nginx.conf', <<'EOF');
 
@@ -35,11 +35,11 @@ events {
 http {
     %%TEST_GLOBALS_HTTP%%
 
-    auth_hmac on;
-    auth_hmac_check_token $http_x_token digest=hex;
-    auth_hmac_message payload;
-    auth_hmac_secret default-secret;
-    auth_hmac_algorithm sha256;
+    secure_link_hmac on;
+    secure_link_hmac_check_token $http_x_token digest=hex;
+    secure_link_hmac_message payload;
+    secure_link_hmac_secret default-secret;
+    secure_link_hmac_algorithm sha256;
 
     server {
         listen       127.0.0.1:8080;
@@ -49,46 +49,46 @@ http {
 
         location = /verify {
             when alternate {
-                auth_hmac on;
-                auth_hmac_message alternate;
-                auth_hmac_secret alternate-secret;
-                auth_hmac_algorithm sha512;
+                secure_link_hmac on;
+                secure_link_hmac_message alternate;
+                secure_link_hmac_secret alternate-secret;
+                secure_link_hmac_algorithm sha512;
             }
 
-            return 200 "$auth_hmac";
+            return 200 "$secure_link_hmac";
         }
 
         location = /base64 {
-            auth_hmac_check_token $http_x_token digest=base64;
-            return 200 "$auth_hmac";
+            secure_link_hmac_check_token $http_x_token digest=base64;
+            return 200 "$secure_link_hmac";
         }
 
         location = /base64url {
-            auth_hmac_check_token $http_x_token digest=base64url;
-            return 200 "$auth_hmac";
+            secure_link_hmac_check_token $http_x_token digest=base64url;
+            return 200 "$secure_link_hmac";
         }
 
         location = /disabled {
-            auth_hmac off;
-            return 200 "$auth_hmac";
+            secure_link_hmac off;
+            return 200 "$secure_link_hmac";
         }
 
         location = /time {
-            auth_hmac_check_time $arg_ts range_start=-5 range_end=5
+            secure_link_hmac_check_time $arg_ts range_start=-5 range_end=5
                 format=%s;
-            return 200 "$auth_hmac";
+            return 200 "$secure_link_hmac";
         }
 
         location = /milliseconds {
-            auth_hmac_check_time $arg_ts range_start=-5 range_end=5
+            secure_link_hmac_check_time $arg_ts range_start=-5 range_end=5
                 format=%ms;
-            return 200 "$auth_hmac";
+            return 200 "$secure_link_hmac";
         }
 
         location = /hex-time {
-            auth_hmac_check_time $arg_ts range_start=-5 range_end=5
+            secure_link_hmac_check_time $arg_ts range_start=-5 range_end=5
                 format=%x;
-            return 200 "$auth_hmac";
+            return 200 "$secure_link_hmac";
         }
     }
 }
