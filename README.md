@@ -292,6 +292,37 @@ To support another version, change the accepted version and digest together.
 
 The example rejects requests with `if` and `return` in the rewrite phase. To retain ACCESS-phase ordering or `satisfy` behavior, have your access handler consume `$secure_link_hmac`. For observation without rejection, remove the `if` block and record `$secure_link_hmac` in an access log. Verification runs when its result variable is read.
 
+Akamai Auth Token 2.0
+====================
+
+**This example requires [ngx_var_module](https://git.hanada.info/hanada/ngx_var_module)** for `hex_decode`, `extract_param`, and `sub`. Build it together with this module. `ngx_expr_module` is not required by this example.
+
+[`examples/akamai-auth-token.conf`](examples/akamai-auth-token.conf) verifies an [Akamai Auth Token 2.0](https://techdocs.akamai.com/property-mgr/docs/auth-token-2-0-ver) supplied in the `X-Auth-Token` request header. Include it in `server {}`, replace `REPLACE_WITH_YOUR_HEX_KEY` with the configured hexadecimal key, and set the document root or content handler.
+
+The example accepts this field sequence, with HMAC-SHA256 and the fixed ACL `/protected/*`:
+
+```text
+st=<start-time>~exp=<end-time>~acl=/protected/*~hmac=<hex-digest>
+```
+
+Both timestamps are Unix seconds. The key is decoded from hexadecimal before verification; the signed message is the original token text before `~hmac=`. The ACL is restricted to the protected location. Tokens with missing, repeated, reordered, or additional fields are rejected. URL tokens, other ACLs, and salt are outside this example's scope.
+
+Generate a matching token with the [Akamai Python SDK](https://github.com/akamai/EdgeAuth-Token-Python):
+
+```python
+from akamai.edgeauth import EdgeAuth
+
+auth = EdgeAuth(
+    key="REPLACE_WITH_YOUR_HEX_KEY",
+    start_time="now",
+    window_seconds=300,
+    escape_early=False,
+)
+print(auth.generate_acl_token("/protected/*"))
+```
+
+Send the result in `X-Auth-Token` when requesting a file under `/protected/`. Invalid signatures and requests outside the token's time range return 403.
+
 Contributing:
 =============
 
