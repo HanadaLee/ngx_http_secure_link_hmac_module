@@ -1,55 +1,41 @@
-Nginx Secure Link HMAC Module
-=============================
+# ngx_http_secure_link_hmac_module
 
-Description:
-============
+Verifies HMAC-signed URLs with optional time limits. Supported algorithms depend on the OpenSSL build and include `blake2b512`, `blake2s256`, `gost`, `md4`, `md5`, `mdc2`, `rmd160`, `sha1`, `sha224`, `sha256`, `sha3-224`, `sha3-256`, `sha3-384`, `sha3-512`, `sha384`, `sha512`, `sha512-224`, `sha512-256`, and `sm3`.
 
-The Nginx secure link HMAC module enhances the security and functionality of the standard secure link module.
-Secure token is created using secure HMAC construction with an arbitrary hash algorithm supported by OpenSSL, e.g.:
-`blake2b512`, `blake2s256`, `gost`, `md4`, `md5`, `mdc2`, `rmd160`, `sha1`, `sha224`, `sha256`,
-`sha3-224`, `sha3-256`, `sha3-384`, `sha3-512`, `sha384`, `sha512`, `sha512-224`, `sha512-256`, `sm3`.
+Tokens use the HMAC construction defined by RFC 2104: `H(secret_key XOR opad, H(secret_key XOR ipad, message))`.
 
-Furthermore, secure token is created as described in RFC2104, that is,
-`H(secret_key XOR opad,H(secret_key XOR ipad, message))` instead of a simple `MD5(secret_key,message, expire)`.
+## Table of Contents
 
-Installation:
-=============
+- [Synopsis](#synopsis)
+- [Installation](#installation)
+- [Conditional configuration](#conditional-configuration)
+- [Directives](#directives)
+  - [secure_link_hmac](#secure_link_hmac)
+  - [secure_link_hmac_check_time](#secure_link_hmac_check_time)
+  - [secure_link_hmac_check_token](#secure_link_hmac_check_token)
+  - [secure_link_hmac_message](#secure_link_hmac_message)
+  - [secure_link_hmac_secret](#secure_link_hmac_secret)
+  - [secure_link_hmac_algorithm](#secure_link_hmac_algorithm)
+- [Embedded Variables](#embedded-variables)
+  - [$secure_link_hmac](#secure_link_hmac-1)
+- [Token generation](#token-generation)
+  - [Perl](#perl)
+  - [PHP](#php)
+  - [Node.js](#nodejs)
+  - [Python](#python)
+  - [Bash](#bash)
+- [Akamai G2O](#akamai-g2o)
+- [Akamai Auth Token 2.0](#akamai-auth-token-20)
+- [Contributing](#contributing)
+- [License](#license)
 
-You'll need to re-compile Nginx from source to include this module.
-Modify your compile of Nginx by adding the following directive (modified to suit your path of course):
+## Synopsis
 
-Static module (built-in nginx binary)
+Set the signed message with `secure_link_hmac_message`, the key with `secure_link_hmac_secret`, and the digest algorithm with `secure_link_hmac_algorithm`.
 
-    ./configure --add-module=/absolute/path/to/ngx_http_secure_link_hmac_module
+Include the timestamp and lifetime in the signed message when using time-limited links.
 
-Dynamic nginx module `ngx_http_secure_link_hmac_module.so` module
-
-    ./configure --with-compat --add-dynamic-module=/absolute/path/to/ngx_http_secure_link_hmac_module
-
-To enable `expr` and `when`, build `ngx_expr_module` statically in
-the same Nginx configuration:
-
-```bash
-./configure \
-    --add-module=/path/to/ngx_expr_module \
-    --add-module=/path/to/ngx_http_secure_link_hmac_module
-```
-
-Build Nginx
-
-    make
-    make install
-
-Usage:
-======
-
-Message to be hashed is defined by `secure_link_hmac_message`, `secret_key` is given by `secure_link_hmac_secret`, and hashing algorithm H is defined by `secure_link_hmac_algorithm`.
-
-For improved security, the time or a timestamp (depending on the date format specified by format parameter) should be appended to the message to be hashed.
-
-It is possible to create links with limited lifetime. This is defined by optional parameters range_start or range_end. If the expiration period is not specified, a link has the unlimited lifetime.
-
-Configuration example for server side.
+The optional `range_start` and `range_end` parameters limit the token's validity period. Without configured time bounds, verification does not check expiration.
 
 ```nginx
 location ^~ /files/ {
@@ -85,13 +71,38 @@ location ^~ /files/ {
 }
 ```
 
-Conditional configuration
-=========================
+## Installation
 
-All module directives support `http`, `server` and `location`. When
-[`ngx_expr_module`](https://git.hanada.info/hanada/ngx_expr_module)
-is built into Nginx, they also support `when` in each of those contexts.
-Every directive selects its value independently:
+To build a static module:
+
+```sh
+./configure --add-module=/absolute/path/to/ngx_http_secure_link_hmac_module
+```
+
+To build the dynamic module `ngx_http_secure_link_hmac_module.so`:
+
+```sh
+./configure --with-compat --add-dynamic-module=/absolute/path/to/ngx_http_secure_link_hmac_module
+```
+
+To enable `expr` and `when`, build `ngx_expr_module` statically in the same Nginx configuration:
+
+```bash
+./configure \
+    --add-module=/path/to/ngx_expr_module \
+    --add-module=/path/to/ngx_http_secure_link_hmac_module
+```
+
+Build and install nginx:
+
+```sh
+make
+make install
+```
+
+## Conditional configuration
+
+All module directives support `http`, `server` and `location`. When [`ngx_expr_module`](https://git.hanada.info/hanada/ngx_expr_module) is built into Nginx, they also support `when` in each of those contexts. Every directive selects its value independently:
 
 ```nginx
 expr use_sha512 str_eq $host secure.example.com;
@@ -105,87 +116,77 @@ secure_link_hmac_algorithm sha256;
 secure_link_hmac_secret default_key;
 ```
 
-The first matching value is used. An unconditional value participates in the
-same ordering, so put it after conditional values when it is intended as a
-fallback. The parameters of one `secure_link_hmac_check_time` or
-`secure_link_hmac_check_token` directive are selected as one configuration value.
+The first matching value is used. An unconditional value participates in the same ordering, so put it after conditional values when it is intended as a fallback. The parameters of one `secure_link_hmac_check_time` or `secure_link_hmac_check_token` directive are selected as one configuration value.
 
-Directives
-==========
+## Directives
 
-secure_link_hmac
----------
+### secure_link_hmac
 
-**syntax:** `secure_link_hmac on | off`
-
-**default:** `secure_link_hmac off`
-
-**context:** `http`, `server`, `location`, `when`
+| Syntax: | **secure_link_hmac** `on` \| `off`; |
+| :--- | :--- |
+| Default: | `secure_link_hmac off;` |
+| Context: | `http`, `server`, `location`, `when` |
 
 Enables or disables HMAC verification. When disabled, `$secure_link_hmac` is empty.
 
-secure_link_hmac_check_time
---------------------
+### secure_link_hmac_check_time
 
-**syntax:** `secure_link_hmac_check_time complex_value [range_start=complex_value] [range_end=complex_value] [format=format] [timezone=gmt|gmt+HHMM|gmt-HHMM]`
+| Syntax: | **secure_link_hmac_check_time** `complex_value [range_start=complex_value] [range_end=complex_value] [format=format] [timezone=gmt\|gmt+HHMM\|gmt-HHMM];` |
+| :--- | :--- |
+| Default: | — |
+| Context: | `http`, `server`, `location`, `when` |
 
-**default:** none
+Specifies the request time and its valid range. `format=%s` selects a Unix timestamp, `format=%ms` a millisecond timestamp, and `format=%x` a hexadecimal timestamp. Other format strings are parsed as dates. `range_start` and `range_end` may contain variables.
 
-**context:** `http`, `server`, `location`, `when`
+### secure_link_hmac_check_token
 
-Specifies the request time and its valid range. `format=%s` selects a Unix
-timestamp, `format=%ms` a millisecond timestamp, and `format=%x` a hexadecimal
-timestamp. Other format strings are parsed as dates. `range_start` and
-`range_end` may contain variables.
+| Syntax: | **secure_link_hmac_check_token** `complex_value [digest=hex\|base64\|base64url\|bin];` |
+| :--- | :--- |
+| Default: | — |
+| Context: | `http`, `server`, `location`, `when` |
 
-secure_link_hmac_check_token
----------------------
+Specifies the supplied HMAC and its encoding. The default digest encoding is `hex`.
 
-**syntax:** `secure_link_hmac_check_token complex_value [digest=hex|base64|base64url|bin]`
+### secure_link_hmac_message
 
-**default:** none
-
-**context:** `http`, `server`, `location`, `when`
-
-Specifies the supplied HMAC and its encoding. The default digest encoding is
-`hex`.
-
-secure_link_hmac_message
------------------
-
-**syntax:** `secure_link_hmac_message complex_value`
-
-**default:** none
-
-**context:** `http`, `server`, `location`, `when`
+| Syntax: | **secure_link_hmac_message** `complex_value;` |
+| :--- | :--- |
+| Default: | — |
+| Context: | `http`, `server`, `location`, `when` |
 
 Specifies the message whose HMAC is verified. The value may contain variables.
 
-secure_link_hmac_secret
-----------------
+### secure_link_hmac_secret
 
-**syntax:** `secure_link_hmac_secret complex_value`
-
-**default:** none
-
-**context:** `http`, `server`, `location`, `when`
+| Syntax: | **secure_link_hmac_secret** `complex_value;` |
+| :--- | :--- |
+| Default: | — |
+| Context: | `http`, `server`, `location`, `when` |
 
 Specifies the HMAC key. The value may contain variables. An empty key is rejected.
 
-secure_link_hmac_algorithm
--------------------
+### secure_link_hmac_algorithm
 
-**syntax:** `secure_link_hmac_algorithm name`
-
-**default:** `secure_link_hmac_algorithm sha256`
-
-**context:** `http`, `server`, `location`, `when`
+| Syntax: | **secure_link_hmac_algorithm** `name;` |
+| :--- | :--- |
+| Default: | `secure_link_hmac_algorithm sha256;` |
+| Context: | `http`, `server`, `location`, `when` |
 
 Specifies an OpenSSL digest algorithm name with a fixed output size. Extendable-output functions such as SHAKE are not supported.
 
-Application side should use a standard hash_hmac function to generate hash, which then needs to be hex or base64url encoded. Example in Perl below.
+## Embedded Variables
 
-#### Variable $data contains secure token, Unix timestamp, and expiration period in seconds
+### $secure_link_hmac
+
+`1` when the HMAC matches and the configured time bounds are satisfied; an empty string otherwise.
+
+## Token generation
+
+Use the same key, message format, and digest algorithm as the nginx configuration. The examples below produce a hexadecimal HMAC-SHA256 token; Base64URL alternatives are shown where applicable.
+
+### Perl
+
+The example returns query parameters containing the token, Unix timestamp, and lifetime in seconds.
 
 ```nginx
 perl_set $secure_token '
@@ -214,7 +215,7 @@ perl_set $secure_token '
 ';
 ```
 
-A similar function in PHP
+### PHP
 
 ```php
 $secret = 'my_very_secret_key';
@@ -232,7 +233,7 @@ $host = $_SERVER['HTTP_HOST'];
 $loc = "https://{$host}/files/top_secret.pdf?st={$hashmac}&ts={$unixtimestamp}&e={$expire}";
 ```
 
-Using Unix timestamp in Node.js
+### Node.js
 
 ```javascript
 const crypto = require("crypto");
@@ -250,9 +251,31 @@ const hashmac = crypto.createHmac('sha256', secret).update(stringToSign).digest(
 const loc = `https://host/files/top_secret.pdf?st=${hashmac}&ts=${unixTimestamp}&e=${expire}`;
 ```
 
-Bash version
+### Python
 
-```shell
+This example uses only the Python standard library and matches the nginx configuration above.
+
+```python
+import hashlib
+import hmac
+import time
+from urllib.parse import urlencode
+
+secret = b"my_secret_key"
+path = "/files/top_secret.pdf"
+timestamp = int(time.time())
+lifetime = 60
+message = f"{path}|{timestamp}|{lifetime}".encode("utf-8")
+signature = hmac.new(secret, message, hashlib.sha256).hexdigest()
+
+query = urlencode({"st": signature, "ts": timestamp, "e": lifetime})
+url = f"https://host{path}?{query}"
+print(url)
+```
+
+### Bash
+
+```bash
 #!/bin/bash
 
 SECRET="my_super_secret"
@@ -268,13 +291,7 @@ TOKEN="$(printf '%s' "$ST" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print 
 echo "http://127.0.0.1$URL?st=$TOKEN&ts=$TIME_STAMP&e=$EXPIRES"
 ```
 
-Embedded Variables
-==================
-* `$secure_link_hmac` - If the hash is correct and the link has not expired then $secure_link_hmac is "1". Otherwise, it is null.
-
-
-Akamai G2O
-==========
+## Akamai G2O
 
 [`examples/akamai-g2o.conf`](examples/akamai-g2o.conf) verifies G2O v5 with HMAC-SHA256 and a 30-second window in both directions. Include it in `server {}`, replace `edge01` and the shared secret, and set the document root or your content handler. Timestamp extraction uses the standard rewrite module's `if` and `set` directives.
 
@@ -292,8 +309,7 @@ To support another version, change the accepted version and digest together.
 
 The example rejects requests with `if` and `return` in the rewrite phase. To retain ACCESS-phase ordering or `satisfy` behavior, have your access handler consume `$secure_link_hmac`. For observation without rejection, remove the `if` block and record `$secure_link_hmac` in an access log. Verification runs when its result variable is read.
 
-Akamai Auth Token 2.0
-====================
+## Akamai Auth Token 2.0
 
 **This example requires [ngx_var_module](https://git.hanada.info/hanada/ngx_var_module)** for `hex_decode`, `extract_param`, and `sub`. Build it together with this module. `ngx_expr_module` is not required by this example.
 
@@ -323,9 +339,10 @@ print(auth.generate_acl_token("/protected/*"))
 
 Send the result in `X-Auth-Token` when requesting a file under `/protected/`. Invalid signatures and requests outside the token's time range return 403.
 
-Contributing:
-=============
+## Contributing
 
-Git source repositories: http://github.com/hanadalee/ngx_http_secure_link_hmac_module/tree/master
+Submit issues and pull requests to the [GitHub repository](https://github.com/HanadaLee/ngx_http_secure_link_hmac_module).
 
-Please feel free to fork the project at GitHub and submit pull requests or patches.
+## License
+
+See [LICENSE](LICENSE).
