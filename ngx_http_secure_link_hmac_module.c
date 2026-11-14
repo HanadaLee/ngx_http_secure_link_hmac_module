@@ -28,29 +28,29 @@
 #define NGX_HTTP_SECURE_LINK_HMAC_BIN           4
 
 typedef struct {
-    ngx_http_complex_value_t  *time;
-    ngx_http_complex_value_t  *start;
-    ngx_http_complex_value_t  *end;
-    ngx_uint_t                 time_mode;
-    ngx_str_t                  time_format;
-    time_t                     time_offset;
+    ngx_http_complex_value_t                *time;
+    ngx_http_complex_value_t                *start;
+    ngx_http_complex_value_t                *end;
+    ngx_uint_t                               time_mode;
+    ngx_str_t                                time_format;
+    time_t                                   time_offset;
 } ngx_http_secure_link_hmac_time_conf_t;
 
 
 typedef struct {
-    ngx_http_complex_value_t  *token;
-    ngx_uint_t                 token_digest;
+    ngx_http_complex_value_t                *token;
+    ngx_uint_t                               token_digest;
 } ngx_http_secure_link_hmac_token_conf_t;
 
 
 typedef struct {
 #if (NGX_EXPR)
-    ngx_array_t  *enable;
-    ngx_array_t  *time;
-    ngx_array_t  *token;
-    ngx_array_t  *message;
-    ngx_array_t  *secret;
-    ngx_array_t  *algorithm;
+    ngx_array_t                             *enable;
+    ngx_array_t                             *time;
+    ngx_array_t                             *token;
+    ngx_array_t                             *message;
+    ngx_array_t                             *secret;
+    ngx_array_t                             *algorithm;
 #else
     ngx_flag_t                               enable;
     ngx_http_secure_link_hmac_time_conf_t   *time;
