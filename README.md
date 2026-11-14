@@ -415,4 +415,4 @@ Submit issues and pull requests to the [GitHub repository](https://github.com/Ha
 
 ## License
 
-Released under the [Unlicense](LICENSE).
+Licensed under the [BSD 2-Clause License](LICENSE).
