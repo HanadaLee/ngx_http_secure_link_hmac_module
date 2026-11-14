@@ -26,6 +26,10 @@ Verifies HMAC-signed URLs with optional time limits. Supports fixed-length OpenS
   - [Bash](#bash)
 - [Akamai G2O](#akamai-g2o)
 - [Akamai Auth Token 2.0](#akamai-auth-token-20)
+- [Google Cloud CDN](#google-cloud-cdn)
+  - [Signed URL](#signed-url)
+  - [Signed Cookie](#signed-cookie)
+  - [Generate signatures](#generate-signatures)
 - [Tests](#tests)
 - [Changelog](#changelog)
 - [Contributing](#contributing)
@@ -344,6 +348,48 @@ print(auth.generate_acl_token("/protected/*"))
 ```
 
 Send the result in `X-Auth-Token` when requesting a file under `/protected/`. Invalid signatures and requests outside the token's time range return 403.
+
+## Google Cloud CDN
+
+These examples require [ngx_var_module](https://git.hanada.info/hanada/ngx_var_module). Include one configuration in a dedicated `server {}`, replace `example-key` and `REPLACE_WITH_YOUR_BASE64URL_KEY`, and set the document root or content handler. The signing key is a Base64URL-encoded 128-bit value. `ngx_expr_module` is not required.
+
+Both examples accept `GET` and `HEAD` and reject unsigned requests. They reconstruct the public URL from `$scheme://$host$request_uri`; this must match the URL used by the signer, including its original escaping. Behind a reverse proxy, the public scheme and host must be supplied from trusted configuration.
+
+### Signed URL
+
+[`examples/google-cloud-cdn-signed-url.conf`](examples/google-cloud-cdn-signed-url.conf) verifies a [Google Cloud CDN Signed URL](https://docs.cloud.google.com/cdn/docs/using-signed-urls) using HMAC-SHA1 and Base64URL:
+
+```text
+https://cdn.example.com/video.mp4?Expires=<unix-seconds>&KeyName=example-key&Signature=<signature>
+```
+
+The signature covers the complete URL through `KeyName`, including any preceding query parameters. The signing fields must appear last in the order shown. Duplicate signing parameters are rejected. The `URLPrefix` form of Signed URL is not included in this example.
+
+### Signed Cookie
+
+[`examples/google-cloud-cdn-signed-cookie.conf`](examples/google-cloud-cdn-signed-cookie.conf) verifies the [Cloud-CDN-Cookie](https://docs.cloud.google.com/cdn/docs/using-signed-cookies) policy:
+
+```text
+URLPrefix=<base64url-prefix>:Expires=<unix-seconds>:KeyName=example-key:Signature=<signature>
+```
+
+The signature covers the policy through `KeyName`. The configuration checks expiration and matches the decoded prefix against both the original URL and the normalized resource path. The prefix must include a path beginning with `/`; end it with `/` for directory-wide access. Duplicate authentication cookies and Signed URL query parameters are rejected.
+
+### Generate signatures
+
+[`examples/google-cloud-cdn.py`](examples/google-cloud-cdn.py) uses the Python standard library. Pass a percent-encoded URL without an explicit port or fragment. `--expires` is an absolute Unix timestamp, independent of the local time zone.
+
+```sh
+expires=$(($(date +%s) + 1800))
+
+python3 examples/google-cloud-cdn.py url 'https://cdn.example.com/video.mp4?download=1' \
+    --key-name example-key --key REPLACE_WITH_YOUR_BASE64URL_KEY --expires "$expires"
+
+python3 examples/google-cloud-cdn.py cookie 'https://cdn.example.com/videos/' \
+    --key-name example-key --key REPLACE_WITH_YOUR_BASE64URL_KEY --expires "$expires"
+```
+
+The first command prints the signed URL. Send the second command's output in the request's `Cookie` header.
 
 ## Tests
 
